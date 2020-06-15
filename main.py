@@ -22,7 +22,7 @@ from visualizer import Visualizer
 from torch.autograd.variable import Variable
 from tensorboardX import SummaryWriter
 from utils import save_checkpoint,AverageMeter,get_n_params
-
+from termcolor import colored
 
 np.random.seed(5)
 torch.manual_seed(5)
@@ -40,9 +40,9 @@ parser.add_argument('--test_only',default= False,help='Only Test the pre-trained
 
 # Arguments for Data Loader
 #Path to train dataset # TODO
-parser.add_argument('-d', '--data', metavar='DIR', default='', help='Path to Complete Point Cloud Data Set')
+parser.add_argument('-d', '--data', metavar='DIR', default='data/shape_net_core_uniform_samples_2048_split/train', help='Path to Complete Point Cloud Data Set')
 #Path to test dataset # TODO
-parser.add_argument('-dw', '--datatest',  default='', help='Path to Complete Point Cloud Data Set')
+parser.add_argument('-dw', '--datatest',  default='data/shape_net_core_uniform_samples_2048_split/test', help='Path to Complete Point Cloud Data Set')
 
 parser.add_argument('-n', '--dataName', metavar='Data Set Name', default='shapenet', choices= dataset_names)
 parser.add_argument('-ad', '--adddata', metavar='aDIR', default='', help='Additional path to dataset')
@@ -66,7 +66,7 @@ parser.add_argument('--gamma',default=0.5,help='gamma for the learning rate sche
 parser.add_argument('--bias_decay',default=0,help='bias decay')
 
 # Loss Settings
-parser.add_argument('--gpu_id', type=int, default=1, help='gpu ids: e.g. 0, 1. -1 is no GPU')
+parser.add_argument('--gpu_id', type=int, default=0, help='gpu ids: e.g. 0, 1. -1 is no GPU')
 
 # Training Settings
 
@@ -299,7 +299,7 @@ def test(valid_loader,model,epoch,args,chamfer,vis_Valid,vis_Valida,test_writer)
     model.eval()
     end = time.time()
     epoch_size = len(valid_loader)
-    j = 1;
+    j = 1
     for i,(input) in enumerate(valid_loader):
 
         with torch.no_grad():
@@ -331,7 +331,7 @@ def test(valid_loader,model,epoch,args,chamfer,vis_Valid,vis_Valida,test_writer)
                 [('Validation Input_pc', trans_input_temp.detach().cpu().numpy()),
                  ('Validation Predicted_pc', pc_1_temp.detach().cpu().numpy())])
             #vis_Valid.display_current_results(visuals, epoch, i)
-            vis_Valida[j].display_current_results(visuals, epoch, i)
+            #vis_Valida[j].display_current_results(visuals, epoch, i)
             j += 1
 
         errors = OrderedDict([('loss', loss.item())])  # plotting average loss
@@ -347,7 +347,7 @@ def validation(valid_loader,model,epoch,args,chamfer,vis_Valid,vis_Valida,valid_
     model.eval()
     end = time.time()
     epoch_size = len(valid_loader)
-    j = 1;
+    j = 1
     for i,(input) in enumerate(valid_loader):
 
         with torch.no_grad():
@@ -380,7 +380,7 @@ def validation(valid_loader,model,epoch,args,chamfer,vis_Valid,vis_Valida,valid_
                 [('Validation Input_pc', trans_input_temp.detach().cpu().numpy()),
                  ('Validation Predicted_pc', pc_1_temp.detach().cpu().numpy())])
             #vis_Valid.display_current_results(visuals, epoch, i)
-            vis_Valida[j].display_current_results(visuals, epoch, i)
+            #vis_Valida[j].display_current_results(visuals, epoch, i)
             j += 1
 
         errors = OrderedDict([('loss', loss.item())])  # plotting average loss

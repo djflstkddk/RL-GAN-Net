@@ -1,13 +1,13 @@
-# RL-GAN-Net
+# RL Project 2020-1 (working on...)
 Official Repository of CVPR 2019 Paper : RL-GAN-Net: A Reinforcement Learning Agent Controlled GAN Network for Real-Time Point Cloud Shape Completion
-
 
 https://arxiv.org/abs/1904.12304
 
-
 Requirements:
 
-The packages in my Conda Environment are listed in Requirement_Conda.txt and Requirements_pip.txt files. Only install the ones needed or you can clone the whole environment. 
+- `conda create -n <env_name> --file requirements_conda.txt python=3.6`
+- `pip install -r requirements_pip.txt`
+- `conda install pytorch==1.2.0 torchvision==0.4.0 cudatoolkit=XX.X -c pytorch` (XX.X: cuda version)
 
 Steps
 * Visualize each training and testing step by using visdom.
