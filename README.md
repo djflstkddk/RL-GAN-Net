@@ -8,6 +8,7 @@ Requirements:
 - `conda create -n <env_name> --file requirements_conda.txt python=3.6`
 - `pip install -r requirements_pip.txt`
 - `conda install pytorch==1.2.0 torchvision==0.4.0 cudatoolkit=XX.X -c pytorch` (XX.X: cuda version)
+-  `mkdir data && ln -s <directory of train,test> shape_net_core_uniform_samples_2048_split`
 
 Steps
 * Visualize each training and testing step by using visdom.
