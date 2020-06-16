@@ -93,7 +93,7 @@ args = parser.parse_args()
 args.device = torch.device("cuda:%d" % (args.gpu_id) if torch.cuda.is_available() else "cpu") # for selecting device for chamfer loss
 #cuda.select_device
 torch.cuda.set_device(args.gpu_id)
-print('Using Tintan xp GPU : ',torch.cuda.current_device())
+print('Using GPU # : ',torch.cuda.current_device())
 
 
 
