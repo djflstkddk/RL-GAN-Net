@@ -1,6 +1,6 @@
 .idea/
 data/
-**/__pycache__
+**/__pycache__/
 ckpts/
 **/*.pyc
 GFV/

@@ -22,7 +22,7 @@ def main(args):
     args.device = torch.device(
         "cuda:%d" % (args.gpu_id) if torch.cuda.is_available() else "cpu")  # for selecting device for chamfer loss
     torch.cuda.set_device(args.gpu_id)
-    print('Using Tintan xp GPU : ', torch.cuda.current_device())
+    print('Using GPU #: ', torch.cuda.current_device())
 
     # Data loader
     # data_loader = Data_Loader(args.train, args.dataset, args.image_path, args.imsize,
@@ -32,9 +32,9 @@ def main(args):
 
     """ -------------- Transfroms/ Data Augmentation-------------------------------"""
 
-    co_transforms = gpv_transforms.Compose([
+    """co_transforms = gpv_transforms.Compose([
           gpv_transforms.oneD2twoD(img_size=args.imsize_new)
-    ])
+    ])"""
 
     input_transforms = transforms.Compose([
         gpv_transforms.ArrayToTensor(),
@@ -47,7 +47,7 @@ def main(args):
     [train_dataset, valid_dataset] = Datasets.__dict__[args.dataName](input_root=args.data,
                                                                       split=args.split_value,
                                                                       input_transforms=input_transforms,
-                                                                      co_transforms=co_transforms)
+                                                                      co_transforms=None)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
                                                num_workers=args.num_workers,
