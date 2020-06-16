@@ -8,22 +8,14 @@ def get_parameters():
     parser = argparse.ArgumentParser()
 
     # Data loader settings
-    #parser.add_argument('-d', '--data', metavar='DIR',default='/home/sarmad/PycharmProjects/pointShapeComplete/GFV/shapenet/08-16-16:11/encoder_pointnet', help='Path to Complete Point Cloud Data Set')
-   # parser.add_argument('-d', '--data', metavar='DIR',default='/home/sarmad/PycharmProjects/pointShapeComplete/GFV/shapenet/09-05-15:10/encoder_pointnet', help='Path to Complete Point Cloud Data Set')
     # TODO Path to the GFV data
-    parser.add_argument('-d', '--data', metavar='DIR',default=    '', help='Path to Complete Point Cloud Data Set')
-
-
-
+    parser.add_argument('-d', '--data', metavar='DIR',default='../GFV/shapenet/06-16-14:06/encoder_pointnet/', help='Path to Complete Point Cloud Data Set')
     parser.add_argument('-s', '--split_value', default=0.9, help='Ratio of train and test data split')
     parser.add_argument('-n', '--dataName', metavar='Data Set Name', default='shapenet')
 
  # TODO add path to pretrained model
     parser.add_argument('--pretrained',
-                        default='')
-    # parser.add_argument('--pretrained',
-    #                     default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/09-12-21:00/ae_pointnet,Adam,1000epochs,b24,lr0.001/model_best.pth.tar',
-    #                     help='Use Pretrained Model for testing or resuming training')  ## TODO
+                        default='../ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar')
 
     parser.add_argument('-me', '--model_encoder', default='encoder_pointnet', help='Chose Your Encoder Model Here',
                         choices=['encoder_pointnet'])  # TODO
@@ -43,7 +35,7 @@ def get_parameters():
                         help='name of the experiment. It decides where to store samples and models')
     parser.add_argument('--display_winsize', type=int, default=256, help='display window size')
     parser.add_argument('--display_id', type=int, default=2000, help='window id of the web display')
-    parser.add_argument('--port_id', type=int, default=8099, help='Port id for browser') #TODO This
+    parser.add_argument('--port_id', type=int, default=8102, help='Port id for browser') #TODO This
     parser.add_argument('--print_freq', type=int, default=10, help='Print Frequency')
 
     # GPU settings
