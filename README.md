@@ -14,12 +14,20 @@ Steps
 * Visualize each training and testing step by using visdom.
 
 1. Download data from https://github.com/optas/latent_3d_points.
-2. Process Data with Processdata2.m to get incomplete point cloud
+2. Process Data with Processdata2.m to get complete point cloud (not incomplete!!)
 3. Train the autoencoder using main.py and save the model
-4. Generate GFV  using pretrained AE using GFV.py and store data
+    - link data paths (train, test). see #TODO
+    - open visdom server with port 8102 `python -m visdom.server -port 8102`
+4. Generate GFV  using pretrained AE using GFVgen.py and store data
+    - link pretrained model & train data path. see #TODO
 5. Train GAN on the generated GFV data by by going into the GAN folder (trainer.py) and save model
 6. Train RL by using pre-trained GAN and AE by running trainRL.py
 7. Test with Incomplete data by running testRL.py
+
+
+TODOs
+- valid set과 test set을 잘못 사용중.... 고쳐야함(main.py) 
+- visdom 관련 코드 아예 없애든가 고치기
 
 Credits:
 

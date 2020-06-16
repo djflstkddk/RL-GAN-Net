@@ -51,7 +51,7 @@ def make_dataset(input_dir,split,net_name,target_dir=None):
 
 def shapenet(input_root, target_root, split, net_name='auto_encoder', co_transforms= None, input_transforms = None, target_transforms= None, args=None,give_name=False):
 
-    [train_list,valid_list] = make_dataset(input_root, split,net_name, target_root)
+    [train_list,valid_list] = make_dataset(input_root, split, net_name, target_root)
 
     train_dataset = ListDataset(input_root,target_root,train_list,net_name, co_transforms, input_transforms, target_transforms,args,mode='train',give_name=give_name)
 
