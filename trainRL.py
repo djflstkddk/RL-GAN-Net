@@ -13,12 +13,14 @@ np.random.seed(5)
 dataset_names = sorted(name for name in Datasets.__all__)
 model_names = sorted(name for name in models.__all__)
 
-def evaluate_policy(policy,valid_loader,env,args, eval_episodes=6,render = False):
+def evaluate_policy(policy, valid_loader, env, args, render = False):
+    print("Evaluation policy start!")
     avg_reward = 0.
-    env.reset(epoch_size=len(valid_loader),figures=8) # reset the visdom and set number of figures
+    env.reset(epoch_size=len(valid_loader), is_training=False, figures=8) # reset the visdom and set number of figures
 
-    #for i,(input) in enumerate(valid_loader):
-    for i in range (0,eval_episodes):
+    num_eval_episodes = len(valid_loader)
+    epi_timestep_list=[]
+    for i in range (0, num_eval_episodes):
         try:
             input = next(dataloader_iterator)
         except:
@@ -28,67 +30,37 @@ def evaluate_policy(policy,valid_loader,env,args, eval_episodes=6,render = False
        # data_iter = iter(valid_loader)
        # input = data_iter.next()
         #action_rand = torch.randn(args.batch_size, args.z_dim)
-        obs =env.agent_input(input)# env(input, action_rand)
+
+        curr_state =env.agent_input(input)
         done = False
 
+        episode_timesteps = 0
         while not done:
-          # Action By Agent and collect reward
-            action = policy.select_action(np.array(obs))
+            action = policy.select_action(np.array(curr_state))
             action= torch.tensor(action).cuda().unsqueeze(dim=0)
-            new_state, _, reward, done, _ = env( input, action,render=render,disp =True)
+            new_state, new_pc, reward, done, _ = env(input, action,render=render,disp =True)
             avg_reward += reward
+            done = True if done or episode_timesteps == args.max_episodes_steps+1 else False
+            episode_timesteps += 1
 
-        if i+1 >= eval_episodes:
+            # feed recursively
+            input = new_pc
+            curr_state = new_state
+
+        epi_timestep_list.append(episode_timesteps)
+
+        if i+1 >= num_eval_episodes:
             break;
 
-    avg_reward /= eval_episodes
+    avg_reward /= num_eval_episodes
 
     print("---------------------------------------")
-    print("Evaluation over %d episodes: %f" % (eval_episodes, avg_reward))
+    print("Evaluation over %d episodes: %f" % (num_eval_episodes, avg_reward))
+    print("Average episode_timestep: " + str(sum(epi_timestep_list) / len(epi_timestep_list)))
     print("---------------------------------------")
+
 
     return avg_reward
-
-def test_policy(policy,valid_loader,env,args, eval_episodes=12,render = True):
-    avg_reward = 0.
-    env.reset(epoch_size=len(valid_loader),figures=12) # reset the visdom and set number of figures
-
-    #for i,(input) in enumerate(valid_loader):
-    for i in range (0,eval_episodes):
-        try:
-            input = next(dataloader_iterator)
-        except:
-            dataloader_iterator = iter(valid_loader)
-            input = next(dataloader_iterator)
-
-       # data_iter = iter(valid_loader)
-       # input = data_iter.next()
-        #action_rand = torch.randn(args.batch_size, args.z_dim)
-        obs =env.agent_input(input)# env(input, action_rand)
-        done = False
-
-        while not done:
-          # Action By Agent and collect reward
-            action = policy.select_action(np.array(obs))
-            action= torch.tensor(action).cuda().unsqueeze(dim=0)
-            new_state, _, reward, done, _ = env( input, action,render=render,disp =True)
-            avg_reward += reward
-
-        if i+1 >= eval_episodes:
-            break;
-
-    avg_reward /= eval_episodes
-
-    print("---------------------------------------")
-    print("Evaluation over %d episodes: %f" % (eval_episodes, avg_reward))
-    print("---------------------------------------")
-
-    return avg_reward
-
-
-
-
-
 
 def main(args,vis_Valid,vis_Valida):
     """ Transforms/ Data Augmentation Tec """
@@ -120,16 +92,9 @@ def main(args,vis_Valid,vis_Valida):
     """-----------------------------------------------Data Loader----------------------------------------------------"""
 
     if (args.net_name == 'auto_encoder'):
-        [train_dataset, valid_dataset] = Datasets.__dict__[args.dataName](input_root=args.data,
+        [train_dataset, valid_dataset] = Datasets.__dict__[args.dataName](input_root=args.data_incomplete,
                                                                           target_root=None,
                                                                           split=args.split_value,
-                                                                          net_name=args.net_name,
-                                                                          input_transforms=input_transforms,
-                                                                          target_transforms=target_transforms,
-                                                                          co_transforms=co_transforms)
-        [test_dataset,_] = Datasets.__dict__[args.dataName](input_root=args.dataIncomplete,
-                                                                          target_root=None,
-                                                                          split=1.0,
                                                                           net_name=args.net_name,
                                                                           input_transforms=input_transforms,
                                                                           target_transforms=target_transforms,
@@ -142,12 +107,6 @@ def main(args,vis_Valid,vis_Valida):
                                                pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(valid_dataset,
                                                batch_size=args.batch_size,
-                                               num_workers=args.workers,
-                                               shuffle=False,
-                                               pin_memory=True)
-
-    test_loader = torch.utils.data.DataLoader(test_dataset,
-                                               batch_size=1,
                                                num_workers=args.workers,
                                                shuffle=False,
                                                pin_memory=True)
@@ -191,12 +150,12 @@ def main(args,vis_Valid,vis_Valida):
     epoch = 0
 
 
-    test_loss = trainRL(train_loader, valid_loader,test_loader, model_encoder, model_decoder, model_G,model_D, epoch, args, chamfer,nll, mse, norm, vis_Valid,
+    trainRL(train_loader, valid_loader, model_encoder, model_decoder, model_G,model_D, epoch, args, chamfer,nll, mse, norm, vis_Valid,
                      vis_Valida)
-    print('Average Loss :{}'.format(test_loss))
 
 
-def trainRL(train_loader,valid_loader,test_loader,model_encoder,model_decoder, model_G,model_D,epoch,args, chamfer,nll, mse,norm,vis_Valid,vis_Valida):
+
+def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model_D,epoch,args, chamfer,nll, mse,norm,vis_Valid,vis_Valida):
 
     model_encoder.eval()
     model_decoder.eval()
@@ -227,115 +186,85 @@ def trainRL(train_loader,valid_loader,test_loader,model_encoder,model_decoder, m
 
     replay_buffer = utils.ReplayBuffer()
 
-    evaluations = [evaluate_policy(policy,valid_loader,env,args)]
-
-
+    evaluations = [evaluate_policy(policy,valid_loader,env, args)]
 
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
-    done = True
-    env.reset(epoch_size=len(train_loader))
-
+    env.reset(epoch_size=len(train_loader), is_training=True)
 
     while total_timesteps < args.max_timesteps:
 
+        # feed new input(incomplete point cloud)
+        try:
+            input = next(dataloader_iterator)
+        except:
+            dataloader_iterator = iter(train_loader)
+            input = next(dataloader_iterator)
 
-        if done:
+        if total_timesteps != 0:
+            if args.policy_name == "DDPG":
+                policy.train(replay_buffer, episode_timesteps, args.batch_size_actor, args.discount, args.tau)
+            else:  # TODO: add soft actor-critic model
+                pass
 
-            try:
-                input = next(dataloader_iterator)
-            except:
-                dataloader_iterator = iter(train_loader)
-                input = next(dataloader_iterator)
+        # Evaluate episode
+        if timesteps_since_eval >= args.eval_freq:
+            timesteps_since_eval %= args.eval_freq
 
+            valid_reward = evaluate_policy(policy, valid_loader, env, args, render=False)
 
-            if total_timesteps != 0:
-                # print("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (total_timesteps, episode_num, episode_timesteps, episode_reward)
-                if args.policy_name == "TD3":
-                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau,
-                                 args.policy_noise, args.noise_clip, args.policy_freq)
-                else:
-                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
+            if args.save_models:
+                policy.save(file_name + '_' + str(total_timesteps), directory="./pytorch_models")
+                if valid_reward > max(evaluations):
+                    policy.save(file_name + '_best', directory="./pytorch_models")
 
-            # Evaluate episode
-            if timesteps_since_eval >= args.eval_freq:
-                timesteps_since_eval %= args.eval_freq
+            evaluations.append(valid_reward)
 
-                evaluations.append(evaluate_policy(policy,valid_loader,env,args,render = False))
+            print("evaluations")
+            print(evaluations)
 
-                if args.save_models: policy.save(file_name, directory="./pytorch_models")
+        # Reset environment
+        env.reset(epoch_size=len(train_loader), is_training=True)
+        done = False
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num += 1
 
-                env.reset(epoch_size=len(test_loader))
-                test_policy(policy, test_loader, env, args, render=True)
+        curr_state = env.agent_input(input)
+        while not done:
+            if total_timesteps < args.pure_random_timesteps:
+                #  action_t = torch.rand(args.batch_size, args.z_dim) # TODO checked rand instead of randn
+                action_t = torch.FloatTensor(args.batch_size, args.z_dim).uniform_(-args.max_action, args.max_action)
+                action = action_t.detach().cpu().numpy().squeeze(0)
 
-                env.reset(epoch_size=len(train_loader))
-
-
-            # Reset environment
-           # obs = env.reset()
-            done = False
-            episode_reward = 0
-            episode_timesteps = 0
-            episode_num += 1
-
-        # Select action randomly or according to policy
-        obs = env.agent_input(input)
-
-        if total_timesteps < args.start_timesteps:
-          #  action_t = torch.rand(args.batch_size, args.z_dim) # TODO checked rand instead of randn
-            action_t = torch.FloatTensor(args.batch_size, args.z_dim).uniform_(-args.max_action, args.max_action)
-            action = action_t.detach().cpu().numpy().squeeze(0)
+            else:
+                action = policy.select_action(np.array(curr_state))
+                if args.expl_noise != 0:
+                    action = (action + np.random.normal(0, args.expl_noise, size=args.z_dim)).clip(
+                        -args.max_action * np.ones(args.z_dim, ), args.max_action * np.ones(args.z_dim, ))
+                    action = np.float32(action)
+                action_t = torch.tensor(action).cuda().unsqueeze(dim=0)
 
 
+            new_state, new_pc, reward, done, _ = env(input, action_t, disp=True)
 
-           # obs, _, _, _, _ = env(input, action_t)
-        else:
+            done = True if episode_timesteps + 1 == args.max_episodes_steps else done
+            done_bool = 1 if done else 0
+            #print("done_bool: " + str(done_bool))
+            episode_reward += reward
 
-           # action_rand = torch.randn(args.batch_size, args.z_dim)
-           #
-           # obs, _, _, _, _ = env( input, action_rand)
+            # Store data in replay buffer
+            replay_buffer.add((curr_state, new_state, action, reward, done_bool))
 
-            action = policy.select_action(np.array(obs))
-            if args.expl_noise != 0:
-                action = (action + np.random.normal(0, args.expl_noise, size=args.z_dim)).clip(
-                    -args.max_action*np.ones(args.z_dim,), args.max_action*np.ones(args.z_dim,))
-                action = np.float32(action)
-            action_t = torch.tensor(action).cuda().unsqueeze(dim=0)
-        # Perform action
+            # feed recursively
+            input = new_pc
+            curr_state = new_state
 
-        # env.render()
+            episode_timesteps += 1
+            timesteps_since_eval += 1
 
-        new_obs, _, reward, done, _ = env(input, action_t,disp = True)
-
-       # new_obs, reward, done, _ = env.step(action)
-        done_bool = 0 if episode_timesteps + 1 == args.max_episodes_steps else float(done)
-        episode_reward += reward
-
-        # Store data in replay buffer
-        replay_buffer.add((obs, new_obs, action, reward, done_bool))
-
-        obs = new_obs
-
-        episode_timesteps += 1
         total_timesteps += 1
-        timesteps_since_eval += 1
-
-
-    # for i,(input) in enumerate(valid_loader):
-    #
-    #
-    #
-    #      if np.shape(input)[0]< args.batch_size:
-    #         break;#print(np.shape(input)[0])
-    #
-    #      action = torch.randn(args.batch_size, args.z_dim)
-    #      action_np = action.detach().cpu().numpy()
-    #      new_state, _, reward,done, _ = env1(i,input,action)
-    #
-    #
-    #
-    # return reward
 
 class envs(nn.Module):
     def __init__(self,args,model_G,model_D,model_encoder,model_decoder,epoch_size):
@@ -361,12 +290,13 @@ class envs(nn.Module):
         self.attempt_id =0
         self.state_prev = np.zeros([4,])
         self.iter = 0
-    def reset(self,epoch_size,figures =3):
+        self.i = 0
+    def reset(self, epoch_size, is_training, figures =3):
+        self.is_training = is_training
         self.j = 1;
-        self.i = 0;
         self.figures = figures;
         self.epoch_size= epoch_size
-    def agent_input(self,input):
+    def agent_input(self,input): # input: incomplete point cloud
         with torch.no_grad():
             input = input.cuda(async=True)
             input_var = Variable(input, requires_grad=True)
@@ -406,6 +336,7 @@ class envs(nn.Module):
             # Preprocesing of Input PC and Predicted PC for Visdom
             trans_input = torch.squeeze(input_var, dim=1)
             trans_input = torch.transpose(trans_input, 1, 2)
+
             trans_input_temp = trans_input[0, :, :]
             pc_1_temp = pc_1[0, :, :] # D Decoder PC
             pc_1_G_temp = pc_1_G[0, :, :] # H Decoder PC
@@ -415,35 +346,32 @@ class envs(nn.Module):
         loss_D = self.nll(out_D)
 
         # Loss Between Noisy GFV and Clean GFV
-        loss_GFV = self.mse(out_G, encoder_out)
+        loss_GFV = self.mse(encoder_out, out_G)
 
         # Norm Loss
-        loss_norm = self.norm(z)
+        #loss_norm = self.norm(z)
 
         # Chamfer loss
-        loss_chamfer = self.chamfer(pc_1_G, pc_1)  # #self.chamfer(pc_1_G, trans_input) instantaneous loss of batch items
+        #loss_chamfer = self.chamfer(pc_1_G, pc_1)  # #self.chamfer(pc_1_G, trans_input) instantaneous loss of batch items
+        loss_chamfer = self.chamfer(pc_1_G, trans_input)
 
         # States Formulation
         state_curr = np.array([loss_D.cpu().data.numpy(), loss_GFV.cpu().data.numpy()
-                                  , loss_chamfer.cpu().data.numpy(), loss_norm.cpu().data.numpy()])
+                                  , loss_chamfer.cpu().data.numpy()])
       #  state_prev = self.state_prev
 
         reward_D = state_curr[0]#state_curr[0] - self.state_prev[0]
         reward_GFV =-state_curr[1]# -state_curr[1] + self.state_prev[1]
         reward_chamfer = -state_curr[2]#-state_curr[2] + self.state_prev[2]
-        reward_norm =-state_curr[3] # - state_curr[3] + self.state_prev[3]
+        #reward_norm =-state_curr[3] # - state_curr[3] + self.state_prev[3]
         # Reward Formulation
-        reward = ( reward_D *0.01 + reward_GFV * 10.0 + reward_chamfer *100.0 + reward_norm*1/10)#( reward_D + reward_GFV * 10.0 + reward_chamfer *100 + reward_norm*0.002) #reward_GFV + reward_chamfer + reward_D * (1/30)  TODO reward_D *0.002 + reward_GFV * 10.0 + reward_chamfer *100 + reward_norm  ( reward_D *0.2 + reward_GFV * 100.0 + reward_chamfer *100 + reward_norm)
-      #  reward = reward * 100
-     #   self.state_prev = state_curr
+        reward = reward_D * 0.01 + reward_GFV * 10.0 + reward_chamfer * 100.0 #+ reward_norm * 1/10
 
         #self.lossess.update(loss_chamfer.item(), input.size(0))  # loss and batch size as input
 
         # measured elapsed time
         self.batch_time.update(time.time() - self.end)
         self.end = time.time()
-
-       # if i % args.print_freq == 0 :
 
       #  if self.j <= 5:
         visuals = OrderedDict(
@@ -454,8 +382,8 @@ class envs(nn.Module):
          vis_Valida[self.j].display_current_results(visuals, self.epoch, self.i)
          self.j += 1
 
-        if disp:
-            print('[{4}][{0}/{1}]\t Reward: {2}\t States: {3}'.format(self.i, self.epoch_size,reward,state_curr,self.iter))
+        if disp and self.is_training:
+            #print('[{4}][{0}/{1}]\t Reward: {2}\t States: {3}'.format(self.i, self.epoch_size,reward,state_curr,self.iter))
             self.i += 1
             if(self.i>=self.epoch_size):
                 self.i=0
@@ -468,9 +396,10 @@ class envs(nn.Module):
         #     done = True
         # else :
         #     done = False
-        done = True
-        state = out_G.detach().cpu().data.numpy().squeeze()
-        return state, _, reward, done, self.lossess.avg
+        done = True if reward < -50 else False
+        new_state = out_G.detach().cpu().data.numpy().squeeze()
+        new_state_pc = torch.transpose(pc_1_G, 1, 2).unsqueeze(1)
+        return new_state, new_state_pc, reward, done, self.lossess.avg
 
 
 
@@ -480,7 +409,7 @@ if __name__ == '__main__':
         "cuda:%d" % (args.gpu_id) if torch.cuda.is_available() else "cpu")  # for selecting device for chamfer loss
 
     torch.cuda.set_device(args.gpu_id)
-    print('Using TITAN XP GPU # :', torch.cuda.current_device())
+    print('Using GPU # :', torch.cuda.current_device())
 
     print(args)
 
