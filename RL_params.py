@@ -47,22 +47,20 @@ def get_parameters():
     # arguments for Saving Models
     parser.add_argument('--save_path', default='./RL_ckpt', help='Path to Checkpoints')
     parser.add_argument('--save', default=True, help='Save Models or not ?')  # TODO
-  #  parser.add_argument('--pretrained_enc_dec',
-  #                      default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/08-08-20:41/ae_pointnet,Adam,200epochs,b24,lr0.001/model_best.pth.tar',
-  #                      help='Use Pretrained Encoder and Decoder for training')
     parser.add_argument('--pretrained_enc_dec',
-                        default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/09-04-21:05/ae_pointnet,Adam,1000epochs,b50,lr0.0005/model_best.pth.tar',
+                        default='ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',
                         help='Use Pretrained Model for Encoder and Decoder')
- #   parser.add_argument('--pretrained_enc_dec',
- #                       default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/09-12-21:00/ae_pointnet,Adam,1000epochs,b24,lr0.001/model_best.pth.tar',
- #                       help='Use Pretrained Model for testing or resuming training')
 
+
+    # TODO for training RL
     parser.add_argument('--pretrained_G',
-                        default='/media/sarmad/hulk/self attention GAN backup/models/sagan_celeb_1dim/999810_G.pth', #997920 24570  /home/sarmad/Desktop/GANs/Self-Attention-GAN-master/models/sagan_celeb   /media/sarmad/hulk/self attention GAN backup/models/sagan_celeb_1dim/999810_G.pth
-                        help='Use Pretrained Generator')#/media/sarmad/hulk/self attention GAN backup/models/sagan_celeb_16 dim # /home/sarmad/Desktop/GANs/Self-Attention-GAN-master/models/sagan_celeb/999810_G.pth
+                        default='GAN/models/sagan_celeb/998200_G.pth',
+                        help='Use Pretrained Generator')
     parser.add_argument('--pretrained_D',
-                        default='/media/sarmad/hulk/self attention GAN backup/models/sagan_celeb_1dim/999810_D.pth',# 997920
+                        default='GAN/models/sagan_celeb/998200_D.pth',
                         help='Use Pretrained Discriminator')
+
+    # TODO for testing RL
     parser.add_argument('--pretrained_Actor',
                         default='/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_actor.pth',  # 997920
                         help='Use Pretrained Actor')
@@ -73,17 +71,17 @@ def get_parameters():
 
 
     # Data Loader settings
-    parser.add_argument('-d', '--data', metavar='DIR',
+    # TODO for training RL
+    parser.add_argument('-d', '--data_incomplete', metavar='DIR',
 
-                        default = '',# Add Path to Complete Train Data set
-                        help='Path to Complete Point Cloud Data Set')
-    parser.add_argument('--dataIncomplete', metavar='DIR',
-                        default='',# Add Path to Incomplete Validation Data set
-                        help='Path to Complete Point Cloud Data Set')
-    parser.add_argument('--dataIncompLarge', metavar='DIR',
-                        default='',# Add PAth to Incomplete Test Data set
-                        help='Path to Incomplete Point Cloud Data Set')
-    parser.add_argument('-s', '--split_value', default=0.9, help='Ratio of train and test data split')
+                        default = 'data/shape_net_core_uniform_samples_2048_split/train_70',
+                        help='Path to Incomplete Point Cloud Train/Valid Data Set')
+    # TODO for testing RL
+    parser.add_argument('--data_incomplete_test', metavar='DIR',
+                        default='data/shape_net_core_uniform_samples_2048_split/train_70',
+                        help='Path to Incomplete Point Cloud Test Data Set')
+
+    parser.add_argument('-s', '--split_value', default=0.95, help='Ratio of train and test data split')
     parser.add_argument('-n', '--dataName', metavar='Data Set Name', default='shapenet', choices=dataset_names)
 
     # Arguments for Torch Data Loader
@@ -98,9 +96,9 @@ def get_parameters():
     parser.add_argument("--state_dim", default=128, type=int)  # State Dimesnions #TODO equal to GFV dims
     parser.add_argument("--max_action", default=10, type=int)  # For Normal Distribution 2.5 is feasible ?
 
-    parser.add_argument("--start_timesteps", default=1e4, # 1e4
+    parser.add_argument("--pure_random_timesteps", default=1e4, # 1e4
                         type=int)  # How many time steps purely random policy is run for
-    parser.add_argument("--eval_freq", default=5e3, type=float)  # How often (time steps) we evaluate
+    parser.add_argument("--eval_freq", default=1e4, type=float)  # How often (time steps) we evaluate
     parser.add_argument("--max_timesteps", default=1e6  , type=float)  # Max time steps to run environment for
     parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
     parser.add_argument("--save_models", default=True) # Save Pytorch Models?
@@ -110,7 +108,7 @@ def get_parameters():
     parser.add_argument("--policy_noise", default=0.2, type=float)  # Noise added to target policy during critic update
     parser.add_argument("--noise_clip", default=0.5, type=float)  # Range to clip target policy noise
     parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
-    parser.add_argument("--max_episodes_steps", default=5, type=int)  # Frequency of delayed policy updates
+    parser.add_argument("--max_episodes_steps", default=10, type=int)  # Frequency of delayed policy updates
 
 
     # Model Hype-Parameter
