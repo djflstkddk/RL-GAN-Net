@@ -38,7 +38,7 @@ def main(args,vis_Valid,vis_Valida):
 
     if (args.net_name == 'auto_encoder'):
 
-        [test_dataset,_] = Datasets.__dict__[args.dataName](input_root=args.dataIncompLarge,
+        [test_dataset,_] = Datasets.__dict__[args.dataName](input_root=args.data_incomplete_test,
                                                                           target_root=None,
                                                                           split=1.0,
                                                                           net_name=args.net_name,

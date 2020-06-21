@@ -195,11 +195,11 @@ class Trainer(object):
             if (step + 1) % self.log_step == 0:
                 elapsed = time.time() - start_time
                 elapsed = str(datetime.timedelta(seconds=elapsed))
-                print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, d_out_fake: {:.4f}, "
-                      " ave_gamma_l3: {:.4f}, ave_gamma_l4: {:.4f}".
-                      format(elapsed, step + 1, self.total_step, (step + 1),
-                             self.total_step , d_loss_real.data[0], d_loss_fake.data[0],self.total_step , d_loss_real.data[0],self.total_step , d_loss_real.data[0]))
-                          #   self.G.attn1.gamma.mean().data[0], self.G.attn2.gamma.mean().data[0] ))
+                print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, d_out_fake: {:.4f}, ".format(
+                    elapsed, step + 1, self.total_step,
+                    (step + 1),self.total_step,
+                    d_loss_real.data, d_loss_fake.data)
+                    )
 
             # Sample images
             if (step + 1) % self.sample_step == 0:
@@ -218,11 +218,11 @@ class Trainer(object):
                    # test1 = 0
                     visuals = OrderedDict(
                         [('Validation Predicted_pc', pc_1_temp.detach().cpu().numpy())])
-                    self.vis[self.j].display_current_results(visuals, epoch, step,z =str(test1))
+                    #self.vis[self.j].display_current_results(visuals, epoch, step,z =str(test1))
 
 
-                save_image(denorm(fake_images.data),
-                           os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
+                """save_image(denorm(fake_images.data),
+                           os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))"""
 
             if (step+1) % model_save_step==0:
                 torch.save(self.G.state_dict(),

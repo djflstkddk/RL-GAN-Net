@@ -30,9 +30,8 @@ parser = argparse.ArgumentParser(description= 'Point Cloud Training Autoencoder 
 #arguments for Saving Models
 parser.add_argument('--save_path',default='./GFV', help='Path to Data Set')
 parser.add_argument('--save',default= True,help= 'Save Models or not ?')#
-#parser.add_argument('--pretrained',default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/08-08-20:41/ae_pointnet,Adam,200epochs,b24,lr0.001/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
-#parser.add_argument('--pretrained',default='/home/sarmad/PycharmProjects/pointShapeComplete/ckpts/shapenet/09-04-21:05/ae_pointnet,Adam,1000epochs,b50,lr0.0005/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
-parser.add_argument('--pretrained',default='/media/sarmad/hulk/pointShapeComplete/ckpts/shapenet/01-15-14:42/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
+# TODO
+parser.add_argument('--pretrained',default='ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
 
 
 # Arguments for Model Settings
@@ -43,7 +42,7 @@ parser.add_argument('-nt','--net_name',default='auto_encoder',help='Choose The n
 
 # Arguments for Data Loader
 #  TODO Add Path to Training Data here
-parser.add_argument('-d', '--data', metavar='DIR', default='', help='Path to Complete Point Cloud Data Set')
+parser.add_argument('-d', '--data', default='data/shape_net_core_uniform_samples_2048_split/train', help='Path to Complete Point Cloud Data Set')
 parser.add_argument('-s','--split_value',default = None, help='Ratio of train and test data split')
 parser.add_argument('-n', '--dataName', metavar='Data Set Name', default='shapenet', choices= dataset_names)
 
@@ -57,7 +56,7 @@ parser.add_argument('-w','--workers',type=int, default=8, help='Set the number o
 parser.add_argument('--name', type=str, default='GFV',help='name of the experiment. It decides where to store samples and models')
 parser.add_argument('--display_winsize', type=int, default=256, help='display window size')
 parser.add_argument('--display_id', type=int, default=2000, help='window id of the web display')
-parser.add_argument('--port_id', type=int, default=8099, help='Port id for browser')
+parser.add_argument('--port_id', type=int, default=8102, help='Port id for browser')
 parser.add_argument('--print_freq', type=int, default=10, help='Print Frequency')
 
 
@@ -73,7 +72,7 @@ parser.add_argument('--normalization', type=str, default='batch', help='normaliz
 
 
 # GPU settings
-parser.add_argument('--gpu_id', type=int, default=1, help='gpu ids: e.g. 0, 1. -1 is no GPU')
+parser.add_argument('--gpu_id', type=int, default=0, help='gpu ids: e.g. 0, 1. -1 is no GPU')
 
 
 
@@ -83,7 +82,7 @@ args = parser.parse_args()
 args.device = torch.device("cuda:%d" % (args.gpu_id) if torch.cuda.is_available() else "cpu") # for selecting device for chamfer loss
 
 torch.cuda.set_device(args.gpu_id)
-print('Using Titian Xp GPu # :', torch.cuda.current_device())
+print('Using GPU # :', torch.cuda.current_device())
 
 def main():
 
@@ -111,6 +110,7 @@ def main():
                                                                   target_transforms=None,
                                                                   co_transforms=None,
                                                                   give_name =True)
+
 
 
      train_loader = torch.utils.data.DataLoader(train_dataset,batch_size=args.batch_size,
@@ -189,8 +189,9 @@ def test(train_loader,valid_loader,model_encoder,model_decoder,epoch,args,chamfe
 
     epoch_size = len(valid_loader)
 
-    j = 1;
+    j = 1
 
+    print("epoch_size:" + str(epoch_size))
     for i,(input,input_name) in enumerate(valid_loader):
         save_path_old = save_path
 
@@ -211,7 +212,7 @@ def test(train_loader,valid_loader,model_encoder,model_decoder,epoch,args,chamfe
 
             encoder_out = model_encoder(input_var,)
 
-            np.save(save_file,encoder_out)
+            np.save(save_file,encoder_out.cpu())
 
             load_file = save_file+'.npy'
 
@@ -239,7 +240,7 @@ def test(train_loader,valid_loader,model_encoder,model_decoder,epoch,args,chamfe
                 [('Validation Input_pc', trans_input_temp.detach().cpu().numpy()),
                  ('Validation Predicted_pc', pc_1_temp.detach().cpu().numpy())])
             #vis_Valid.display_current_results(visuals, epoch, i)
-            vis_Valida[j].display_current_results(visuals, epoch, i)
+            #vis_Valida[j].display_current_results(visuals, epoch, i)
             j += 1
 
         errors = OrderedDict([('loss', loss.item())])  # plotting average loss

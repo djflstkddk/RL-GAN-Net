@@ -1,24 +1,36 @@
-# RL-GAN-Net
+# RL Project 2020-1 (working on...)
 Official Repository of CVPR 2019 Paper : RL-GAN-Net: A Reinforcement Learning Agent Controlled GAN Network for Real-Time Point Cloud Shape Completion
-
 
 https://arxiv.org/abs/1904.12304
 
-
 Requirements:
 
-The packages in my Conda Environment are listed in Requirement_Conda.txt and Requirements_pip.txt files. Only install the ones needed or you can clone the whole environment. 
+- `conda create -n <env_name> --file requirements_conda.txt python=3.6`
+- `pip install -r requirements_pip.txt`
+- `conda install pytorch==1.2.0 torchvision==0.4.0 cudatoolkit=XX.X -c pytorch` (XX.X: cuda version)
+-  `mkdir data && ln -s <directory of train,test> shape_net_core_uniform_samples_2048_split`
 
 Steps
 * Visualize each training and testing step by using visdom.
 
 1. Download data from https://github.com/optas/latent_3d_points.
-2. Process Data with Processdata2.m to get incomplete point cloud
+2. Process Data with `Processdata2.m` to get complete point cloud (not incomplete!!)
 3. Train the autoencoder using main.py and save the model
-4. Generate GFV  using pretrained AE using GFV.py and store data
+    - link data paths (train, test). see #TODO
+    - open visdom server with port 8102 `python -m visdom.server -port 8102`
+4. Generate GFV  using pretrained AE using GFVgen.py and store data
+    - link pretrained model & train data path. see #TODO
 5. Train GAN on the generated GFV data by by going into the GAN folder (trainer.py) and save model
 6. Train RL by using pre-trained GAN and AE by running trainRL.py
+    - First, process data with `Processdata.m` to get incomplete point cloud
+    - link data paths (incomplete training dataset). see #TODO in `RL_params.py` 
 7. Test with Incomplete data by running testRL.py
+    - Not yet
+
+
+TODOs
+- valid set과 test set을 잘못 사용중.... 고쳐야함(main.py) 
+- visdom 관련 코드 아예 없애든가 고치기
 
 Credits:
 
