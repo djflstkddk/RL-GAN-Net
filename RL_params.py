@@ -98,7 +98,7 @@ def get_parameters():
 
     parser.add_argument("--pure_random_timesteps", default=1e4, # 1e4
                         type=int)  # How many time steps purely random policy is run for
-    parser.add_argument("--eval_freq", default=3e3, type=float)  # How often (time steps) we evaluate
+    parser.add_argument("--eval_freq", default=1e4, type=float)  # How often (time steps) we evaluate
     parser.add_argument("--max_timesteps", default=1e6  , type=float)  # Max time steps to run environment for
     parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
     parser.add_argument("--save_models", default=True) # Save Pytorch Models?
