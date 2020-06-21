@@ -4,3 +4,5 @@ data/
 ckpts/
 **/*.pyc
 GFV/
+GAN/models/sagan_celeb/
+pytorch_models/
