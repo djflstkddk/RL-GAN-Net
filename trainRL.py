@@ -1,10 +1,7 @@
 # Written by Muhammad Sarmad
 # Date : 23 August 2018
-
-
-
+from RL import SoftAC
 from RL_params import *
-
 
 
 np.random.seed(5)
@@ -35,10 +32,15 @@ def evaluate_policy(policy, valid_loader, env, args, render = False):
         done = False
 
         episode_timesteps = 0
+        is_first = True
         while not done:
-            action = policy.select_action(np.array(curr_state))
-            action= torch.tensor(action).cuda().unsqueeze(dim=0)
-            new_state, new_pc, reward, done, _ = env(input, action,render=render,disp =True)
+            if args.policy_name == "SoftAC":
+                action, _ = policy.select_action(np.array(curr_state))
+            elif args.policy_name == "DDPG":
+                action = policy.select_action(np.array(curr_state))
+            action = torch.tensor(action).cuda().unsqueeze(dim=0)
+            new_state, new_pc, reward, done, _ = env(input, action,render=render,disp =True, is_first = is_first)
+            is_first = False
             avg_reward += reward
             done = True if done or episode_timesteps == args.max_episodes_steps+1 else False
             episode_timesteps += 1
@@ -146,7 +148,6 @@ def main(args,vis_Valid,vis_Valida):
     nll = NLL()
     mse = MSE(reduction = 'elementwise_mean')
     norm = Norm(dims=args.z_dim)
-
     epoch = 0
 
 
@@ -183,6 +184,8 @@ def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model
         policy = OurDDPG.DDPG(state_dim, action_dim, max_action)
     elif args.policy_name == "DDPG":
         policy = DDPG.DDPG(state_dim, action_dim, max_action, args.device)
+    elif args.policy_name == "SoftAC":
+        policy = SoftAC.SoftAC(state_dim, action_dim, max_action, args.device)
 
     replay_buffer = utils.ReplayBuffer()
 
@@ -203,10 +206,7 @@ def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model
             input = next(dataloader_iterator)
 
         if total_timesteps != 0:
-            if args.policy_name == "DDPG":
-                policy.train(replay_buffer, episode_timesteps, args.batch_size_actor, args.discount, args.tau)
-            else:  # TODO: add soft actor-critic model
-                pass
+            policy.train(replay_buffer, episode_timesteps, args.batch_size_actor, args.discount, args.tau)
 
         # Evaluate episode
         if timesteps_since_eval >= args.eval_freq:
@@ -232,14 +232,19 @@ def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model
         episode_num += 1
 
         curr_state = env.agent_input(input)
+        is_first = True
         while not done:
             if total_timesteps < args.pure_random_timesteps:
                 #  action_t = torch.rand(args.batch_size, args.z_dim) # TODO checked rand instead of randn
                 action_t = torch.FloatTensor(args.batch_size, args.z_dim).uniform_(-args.max_action, args.max_action)
                 action = action_t.detach().cpu().numpy().squeeze(0)
+                log_pi = np.log(1/(2*float(args.max_action)))
 
             else:
-                action = policy.select_action(np.array(curr_state))
+                if args.policy_name == "DDPG":
+                    action = policy.select_action(np.array(curr_state))
+                else :
+                    action, log_pi = policy.select_action(np.array(curr_state))
                 if args.expl_noise != 0:
                     action = (action + np.random.normal(0, args.expl_noise, size=args.z_dim)).clip(
                         -args.max_action * np.ones(args.z_dim, ), args.max_action * np.ones(args.z_dim, ))
@@ -247,8 +252,8 @@ def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model
                 action_t = torch.tensor(action).cuda().unsqueeze(dim=0)
 
 
-            new_state, new_pc, reward, done, _ = env(input, action_t, disp=True)
-
+            new_state, new_pc, reward, done, _ = env(input, action_t, disp=True, is_first=is_first)
+            is_first = False
             done = True if episode_timesteps + 1 == args.max_episodes_steps else done
             done_bool = 1 if done else 0
             #print("done_bool: " + str(done_bool))
@@ -291,6 +296,7 @@ class envs(nn.Module):
         self.state_prev = np.zeros([4,])
         self.iter = 0
         self.i = 0
+        self.prev_reward_D = -1000000
     def reset(self, epoch_size, is_training, figures =3):
         self.is_training = is_training
         self.j = 1;
@@ -303,7 +309,7 @@ class envs(nn.Module):
             encoder_out = self.model_encoder(input_var, )
             out = encoder_out.detach().cpu().numpy().squeeze()
         return out
-    def forward(self,input,action,render=False, disp=False):
+    def forward(self,input,action,render=False, disp=False, is_first=False):
         with torch.no_grad():
             # Encoder Input
             input = input.cuda(async=True)
@@ -361,7 +367,7 @@ class envs(nn.Module):
       #  state_prev = self.state_prev
 
         reward_D = state_curr[0]#state_curr[0] - self.state_prev[0]
-        reward_GFV =-state_curr[1]# -state_curr[1] + self.state_prev[1]
+        reward_GFV = -state_curr[1]# -state_curr[1] + self.state_prev[1]
         reward_chamfer = -state_curr[2]#-state_curr[2] + self.state_prev[2]
         #reward_norm =-state_curr[3] # - state_curr[3] + self.state_prev[3]
         # Reward Formulation
@@ -396,7 +402,15 @@ class envs(nn.Module):
         #     done = True
         # else :
         #     done = False
-        done = True if reward < -50 else False
+        if is_first:
+            done = False
+        elif reward_D < self.prev_reward_D:
+            done = True
+        else:
+            done = False
+
+        self.prev_reward_D = reward_D
+
         new_state = out_G.detach().cpu().data.numpy().squeeze()
         new_state_pc = torch.transpose(pc_1_G, 1, 2).unsqueeze(1)
         return new_state, new_state_pc, reward, done, self.lossess.avg
