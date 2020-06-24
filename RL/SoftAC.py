@@ -27,7 +27,7 @@ class Actor(nn.Module):
 
         self.max_action = max_action
 
-    def forward(self, x, deterministic = False, with_logprob = True):
+    def forward(self, x, deterministic = False, repara_trick = True, with_logprob = True):
         x = F.relu(self.l1(x))
         log_std = self.log_std_layer(x)
         std = torch.exp(log_std)
@@ -38,8 +38,10 @@ class Actor(nn.Module):
 
         if deterministic:
             pi_action = mu
-        else:
+        elif repara_trick:
             pi_action = pi_distribution.rsample()
+        else:
+            pi_action = pi_distribution.sample()
 
         if with_logprob:
             logp_pi = pi_distribution.log_prob(pi_action).sum(axis = -1)
@@ -103,7 +105,8 @@ class SoftAC(object):
             reward = torch.FloatTensor(r).to(device)
 
             # Compute the target Q value
-            action_tilde, log_pi_tilde = self.actor(next_state)
+            action_tilde, log_pi_tilde = self.actor(next_state, repara_trick=False)
+            log_pi_tilde = log_pi_tilde.unsqueeze(1)
             target_Q = self.critic_target(next_state, action_tilde)
             target_Q = reward + (done * discount * (target_Q - alpha * log_pi_tilde)).detach() # added entropy
 
@@ -119,7 +122,8 @@ class SoftAC(object):
             self.critic_optimizer.step()
 
             # Compute actor loss
-            tmp_action, tmp_log_pi = self.actor(state)
+            tmp_action, tmp_log_pi = self.actor(state, repara_trick=True)
+            tmp_log_pi = tmp_log_pi.unsqueeze(1)
             actor_loss = (-self.critic(state, tmp_action) + alpha * tmp_log_pi).mean()
 
             # Optimize the actor
