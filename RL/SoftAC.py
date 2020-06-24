@@ -77,8 +77,6 @@ class SoftAC(object):
     def __init__(self, state_dim, action_dim, max_action, device):
         self.device = device
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
-        self.actor_target = Actor(state_dim, action_dim, max_action).to(device)
-        self.actor_target.load_state_dict(self.actor.state_dict())
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
 
         self.critic = Critic(state_dim, action_dim).to(device)
@@ -97,20 +95,17 @@ class SoftAC(object):
 
             # Sample replay buffer
             x, y, u, r, d = replay_buffer.sample(batch_size)
-            #pdb.set_trace()
-            #_, log_pi = self.actor(Variable(torch.from_numpy(x).to(device)))
+
             state = torch.FloatTensor(x).to(device)
-            _, log_pi = self.actor(state)
-            log_pi = log_pi.unsqueeze(1)
             action = torch.FloatTensor(u).to(device)
-            #log_pi = torch.FloatTensor(log_pi).to(device)
             next_state = torch.FloatTensor(y).to(device)
             done = torch.FloatTensor(1 - d).to(device)
             reward = torch.FloatTensor(r).to(device)
 
             # Compute the target Q value
-            target_Q = self.critic_target(next_state, self.actor_target(next_state)[0])
-            target_Q = reward + (done * discount * (target_Q - alpha*log_pi)).detach() # added entropy
+            action_tilde, log_pi_tilde = self.actor(next_state)
+            target_Q = self.critic_target(next_state, action_tilde)
+            target_Q = reward + (done * discount * (target_Q - alpha * log_pi_tilde)).detach() # added entropy
 
             # Get current Q estimate
             current_Q = self.critic(state, action)
@@ -124,8 +119,8 @@ class SoftAC(object):
             self.critic_optimizer.step()
 
             # Compute actor loss
-            tmp_action, _ = self.actor(state)
-            actor_loss = (-self.critic(state, tmp_action) + alpha * log_pi).mean()
+            tmp_action, tmp_log_pi = self.actor(state)
+            actor_loss = (-self.critic(state, tmp_action) + alpha * tmp_log_pi).mean()
 
             # Optimize the actor
             self.actor_optimizer.zero_grad()
@@ -136,8 +131,6 @@ class SoftAC(object):
             for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
                 target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
-            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
     def save(self, filename, directory):
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))

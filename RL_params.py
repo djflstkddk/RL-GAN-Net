@@ -91,7 +91,7 @@ def get_parameters():
 
     # Hyper parameters for RL
     parser.add_argument('--attempts', default=5, type=int)  # Number of tries to give to RL Agent
-    parser.add_argument("--policy_name", default="DDPG")  # Policy name TD3 OurDDPG
+    parser.add_argument("--policy_name", default="SoftAC")  # Policy name TD3 OurDDPG
     parser.add_argument("--env_name", default="RLGAN")  # Policy name TD3 OurDDPG
     parser.add_argument("--state_dim", default=128, type=int)  # State Dimesnions #TODO equal to GFV dims
     parser.add_argument("--max_action", default=10, type=int)  # For Normal Distribution 2.5 is feasible ?
@@ -99,7 +99,7 @@ def get_parameters():
     parser.add_argument("--pure_random_timesteps", default=1e4, # 1e4
                         type=int)  # How many time steps purely random policy is run for
     parser.add_argument("--eval_freq", default=1e4, type=float)  # How often (time steps) we evaluate
-    parser.add_argument("--max_timesteps", default=1e6  , type=float)  # Max time steps to run environment for
+    parser.add_argument("--max_timesteps", default=2e5  , type=float)  # Max time steps to run environment for
     parser.add_argument("--expl_noise", default=0.2, type=float)  # Std of Gaussian exploration noise
     parser.add_argument("--save_models", default=True) # Save Pytorch Models?
     parser.add_argument("--batch_size_actor", default=100, type=int)  # Batch size for both actor and critic
