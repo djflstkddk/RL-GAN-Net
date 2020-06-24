@@ -91,7 +91,7 @@ class SoftAC(object):
         actor_out = self.actor(state)
         return actor_out[0].cpu().data.numpy().flatten(), actor_out[1].cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, alpha = 0.2):
+    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, alpha = 0.1):
 
         for it in range(iterations):
 
