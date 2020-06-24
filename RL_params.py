@@ -100,7 +100,7 @@ def get_parameters():
                         type=int)  # How many time steps purely random policy is run for
     parser.add_argument("--eval_freq", default=1e4, type=float)  # How often (time steps) we evaluate
     parser.add_argument("--max_timesteps", default=1e6  , type=float)  # Max time steps to run environment for
-    parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
+    parser.add_argument("--expl_noise", default=0.2, type=float)  # Std of Gaussian exploration noise
     parser.add_argument("--save_models", default=True) # Save Pytorch Models?
     parser.add_argument("--batch_size_actor", default=100, type=int)  # Batch size for both actor and critic
     parser.add_argument("--discount", default=0.99, type=float)  # Discount factor

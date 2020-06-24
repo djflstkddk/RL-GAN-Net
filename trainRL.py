@@ -243,12 +243,13 @@ def trainRL(train_loader,valid_loader,model_encoder,model_decoder, model_G,model
             else:
                 if args.policy_name == "DDPG":
                     action = policy.select_action(np.array(curr_state))
+                    if args.expl_noise != 0:
+                        action = (action + np.random.normal(0, args.expl_noise, size=args.z_dim)).clip(
+                            -args.max_action * np.ones(args.z_dim, ), args.max_action * np.ones(args.z_dim, ))
+                        action = np.float32(action)
                 else :
                     action, log_pi = policy.select_action(np.array(curr_state))
-                if args.expl_noise != 0:
-                    action = (action + np.random.normal(0, args.expl_noise, size=args.z_dim)).clip(
-                        -args.max_action * np.ones(args.z_dim, ), args.max_action * np.ones(args.z_dim, ))
-                    action = np.float32(action)
+
                 action_t = torch.tensor(action).cuda().unsqueeze(dim=0)
 
 
