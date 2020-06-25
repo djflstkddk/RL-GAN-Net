@@ -62,10 +62,10 @@ def get_parameters():
 
     # TODO for testing RL
     parser.add_argument('--pretrained_Actor',
-                        default='/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_actor.pth',  # 997920
+                        default='pytorch_models/SAC_repara_on/SoftAC_RLGAN_best_actor.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_actor.pth',  # 997920
                         help='Use Pretrained Actor')
     parser.add_argument('--pretrained_Critic',
-                        default='/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_critic.pth',  # 997920
+                        default='pytorch_models/SAC_repara_on/SoftAC_RLGAN_best_critic.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_critic.pth',  # 997920
                         help='Use Pretrained Critic')
     parser.add_argument('--test_only', default=False, help='Only Test the pre-trained Agent')
 
@@ -78,7 +78,7 @@ def get_parameters():
                         help='Path to Incomplete Point Cloud Train/Valid Data Set')
     # TODO for testing RL
     parser.add_argument('--data_incomplete_test', metavar='DIR',
-                        default='data/shape_net_core_uniform_samples_2048_split/train_70',
+                        default='data/shape_net_core_uniform_samples_2048_split/test_70',
                         help='Path to Incomplete Point Cloud Test Data Set')
 
     parser.add_argument('-s', '--split_value', default=0.95, help='Ratio of train and test data split')
