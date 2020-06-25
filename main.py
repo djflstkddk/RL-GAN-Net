@@ -70,7 +70,7 @@ parser.add_argument('--gpu_id', type=int, default=0, help='gpu ids: e.g. 0, 1. -
 
 # Training Settings
 
-parser.add_argument('--epochs',default=400,help='Number of epochs to run')
+parser.add_argument('--epochs',default=200,help='Number of epochs to run')
 parser.add_argument('--start_epoch',default=0,help='Starting Epoch')
 
 # Visualizer Settings

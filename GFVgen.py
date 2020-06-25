@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(description= 'Point Cloud Training Autoencoder 
 parser.add_argument('--save_path',default='./GFV', help='Path to Data Set')
 parser.add_argument('--save',default= True,help= 'Save Models or not ?')#
 # TODO
-parser.add_argument('--pretrained',default='ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
+parser.add_argument('--pretrained',default='ckpts/shapenet/06-25-15:29/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',help= 'Use Pretrained Model for testing or resuming training') ## TODO
 
 
 # Arguments for Model Settings

@@ -4,8 +4,8 @@
 
 
 from RL_params import *
-
-
+from Datasets.plyfile.plyfile import PlyData
+from visu_util import plot_pcd_three_views
 
 np.random.seed(5)
 #torch.manual_seed(5)
@@ -155,13 +155,16 @@ def testRL(test_loader,model_encoder,model_decoder, model_G,model_D,model_actor,
         epi_timestep_list.append(step)
 
     avg_reward /= num_test_episodes
+    avg_cd_loss = env.cd_loss / num_test_episodes
     print("---------------------------------------")
     print("Evaluation over %d episodes: %f" % (num_test_episodes, avg_reward))
     print("Average episode_timestep: " + str(sum(epi_timestep_list) / len(epi_timestep_list)))
+    print("Average CD loss: " + str(avg_cd_loss))
     print("---------------------------------------")
     with open(os.path.join('test', 'results'), 'w') as log:
         log.write("Evaluation over %d episodes: %f \n" %(num_test_episodes, avg_reward))
         log.write("Average episode_timestep: " + str(sum(epi_timestep_list) / len(epi_timestep_list)) + '\n')
+        log.write("Average CD loss: " + str(avg_cd_loss) + '\n')
 
 
 class envs(nn.Module):
@@ -190,6 +193,7 @@ class envs(nn.Module):
         self.iter = 0
         self.i = 0
         self.prev_reward_D = -1000000
+        self.cd_loss = 0
     def reset(self, epoch_size, is_training, figures =3):
         self.is_training = is_training
         self.j = 1;
@@ -293,27 +297,60 @@ class envs(nn.Module):
         test3 = pc_1_G_temp.detach().cpu().numpy()
 
         fname = fname[0]
-        if not os.path.exists('test/' + fname[:8]):
-            os.makedirs('test/' + fname[:8])
 
-        if not os.path.exists('test/' + fname[:9] + filenum):
-            os.makedirs('test/' + fname[:9] + filenum)
+        category_id, model_id = fname.split('/')
+        if not os.path.exists(os.path.join('test', category_id)):
+            os.makedirs(os.path.join('test', category_id))
 
-        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_input.xyz', np.c_[test1[0, :], test1[1, :], test1[2, :]],
+
+        if not os.path.exists(os.path.join('test', category_id, model_id)):
+            os.makedirs(os.path.join('test', category_id, model_id))
+
+        np.savetxt(os.path.join('test', category_id, model_id, str(step) + '_input.xyz'), np.c_[test1[0, :], test1[1, :], test1[2, :]],
                    header='x y z', fmt='%1.6f',
                    delimiter=' ')
-        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_AE.xyz', np.c_[test2[0, :], test2[1, :], test2[2, :]],
+        np.savetxt(os.path.join('test', category_id, model_id, str(step) + '_AE.xyz'), np.c_[test2[0, :], test2[1, :], test2[2, :]],
                    header='x y z', fmt='%1.6f',
                    delimiter=' ')
-        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_agent.xyz', np.c_[test3[0, :], test3[1, :], test3[2, :]],
+        np.savetxt(os.path.join('test', category_id, model_id, str(step) + '_agent.xyz'), np.c_[test3[0, :], test3[1, :], test3[2, :]],
                    header='x y z', fmt='%1.6f',
                    delimiter=' ')
 
 
         if is_first:
             done = False
+            np.savetxt(os.path.join('test', category_id, model_id, 'input.xyz'),
+                       np.c_[test1[0, :], test1[1, :], test1[2, :]],
+                       header='x y z', fmt='%1.6f',
+                       delimiter=' ')
         elif reward_D < self.prev_reward_D:
             done = True
+            np.savetxt(os.path.join('test', category_id, model_id, 'output.xyz'),
+                       np.c_[test1[0, :], test1[1, :], test1[2, :]],
+                       header='x y z', fmt='%1.6f',
+                       delimiter=' ')
+
+            # for ground truth
+            ply_data = PlyData.read(os.path.join('data/shape_net_core_uniform_samples_2048_split/test', category_id, model_id + '.ply'))
+            points = ply_data['vertex']
+            gt_points = np.vstack([points['x'], points['y'], points['z']])
+            np.savetxt(os.path.join('test', category_id, model_id, 'ground_truth.xyz'),
+                       np.c_[gt_points[0, :], gt_points[1, :], gt_points[2, :]],
+                       header='x y z', fmt='%1.6f',
+                       delimiter=' ')
+
+            # visualizing
+            input = np.loadtxt(os.path.join('test', category_id, model_id, 'input.xyz'))
+            output = test1.T
+            gt = gt_points.T
+            plot_pcd_three_views(os.path.join('test', category_id, model_id, 'result.png'),
+                                 [input, output, gt],
+                                 ['input', 'output', 'gt'])
+
+
+            # cd loss
+            chamfer_distance = self.chamfer(torch.Tensor(test1).cuda().unsqueeze(0), torch.Tensor(gt_points).cuda().unsqueeze(0))
+            self.cd_loss += chamfer_distance.detach().cpu().numpy()
         else:
             done = False
 

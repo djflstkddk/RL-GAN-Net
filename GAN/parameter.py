@@ -9,13 +9,13 @@ def get_parameters():
 
     # Data loader settings
     # TODO Path to the GFV data
-    parser.add_argument('-d', '--data', metavar='DIR',default='../GFV/shapenet/06-16-14:06/encoder_pointnet/', help='Path to Complete Point Cloud Data Set')
+    parser.add_argument('-d', '--data', metavar='DIR',default='../GFV/shapenet/06-25-17:18/encoder_pointnet/', help='Path to Complete Point Cloud Data Set')
     parser.add_argument('-s', '--split_value', default=0.9, help='Ratio of train and test data split')
     parser.add_argument('-n', '--dataName', metavar='Data Set Name', default='shapenet')
 
  # TODO add path to pretrained model
     parser.add_argument('--pretrained',
-                        default='../ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar')
+                        default='../ckpts/shapenet/06-25-15:29/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar')
 
     parser.add_argument('-me', '--model_encoder', default='encoder_pointnet', help='Chose Your Encoder Model Here',
                         choices=['encoder_pointnet'])  # TODO
@@ -55,7 +55,7 @@ def get_parameters():
     parser.add_argument('--version', default='sagan_celeb',type=str)
 
     # Training setting
-    parser.add_argument('--total_step', type=int, default=1000000, help='how many times to update the generator')
+    parser.add_argument('--total_step', type=int, default=500000, help='how many times to update the generator')
     parser.add_argument('--d_iters', type=float, default=5)
     parser.add_argument('--batch_size', default = 50, type=int) #
     parser.add_argument('--num_workers', type=int, default=2) #
