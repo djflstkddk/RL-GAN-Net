@@ -48,24 +48,24 @@ def get_parameters():
     parser.add_argument('--save_path', default='./RL_ckpt', help='Path to Checkpoints')
     parser.add_argument('--save', default=True, help='Save Models or not ?')  # TODO
     parser.add_argument('--pretrained_enc_dec',
-                        default='ckpts/shapenet/06-16-00:17/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',
+                        default='ckpts/shapenet/06-25-15:29/ae_pointnet,Adam,400epochs,b24,lr0.001/model_best.pth.tar',
                         help='Use Pretrained Model for Encoder and Decoder')
 
 
     # TODO for training RL
     parser.add_argument('--pretrained_G',
-                        default='GAN/models/sagan_celeb/998200_G.pth',
+                        default='GAN/models/sagan_celeb/197280_G.pth',
                         help='Use Pretrained Generator')
     parser.add_argument('--pretrained_D',
-                        default='GAN/models/sagan_celeb/998200_D.pth',
+                        default='GAN/models/sagan_celeb/197280_D.pth',
                         help='Use Pretrained Discriminator')
 
     # TODO for testing RL
     parser.add_argument('--pretrained_Actor',
-                        default='pytorch_models/SAC_repara_on/SoftAC_RLGAN_best_actor.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_actor.pth',  # 997920
+                        default='pytorch_models/ddpg_std_0.7/DDPG_RLGAN_best_actor.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_actor.pth',  # 997920
                         help='Use Pretrained Actor')
     parser.add_argument('--pretrained_Critic',
-                        default='pytorch_models/SAC_repara_on/SoftAC_RLGAN_best_critic.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_critic.pth',  # 997920
+                        default='pytorch_models/ddpg_std_0.7/DDPG_RLGAN_best_critic.pth', #'/home/ymkim/ShapeCompletion/pointShapeComplete/pytorch_models/DDPG_RLGAN_critic.pth',  # 997920
                         help='Use Pretrained Critic')
     parser.add_argument('--test_only', default=False, help='Only Test the pre-trained Agent')
 
@@ -91,7 +91,7 @@ def get_parameters():
 
     # Hyper parameters for RL
     parser.add_argument('--attempts', default=5, type=int)  # Number of tries to give to RL Agent
-    parser.add_argument("--policy_name", default="SoftAC")  # Policy name TD3 OurDDPG
+    parser.add_argument("--policy_name", default="DDPG")  # Policy name TD3 OurDDPG
     parser.add_argument("--env_name", default="RLGAN")  # Policy name TD3 OurDDPG
     parser.add_argument("--state_dim", default=128, type=int)  # State Dimesnions #TODO equal to GFV dims
     parser.add_argument("--max_action", default=10, type=int)  # For Normal Distribution 2.5 is feasible ?
@@ -100,7 +100,7 @@ def get_parameters():
                         type=int)  # How many time steps purely random policy is run for
     parser.add_argument("--eval_freq", default=1e4, type=float)  # How often (time steps) we evaluate
     parser.add_argument("--max_timesteps", default=2e5  , type=float)  # Max time steps to run environment for
-    parser.add_argument("--expl_noise", default=0.2, type=float)  # Std of Gaussian exploration noise
+    parser.add_argument("--expl_noise", default=0.7, type=float)  # Std of Gaussian exploration noise
     parser.add_argument("--save_models", default=True) # Save Pytorch Models?
     parser.add_argument("--batch_size_actor", default=100, type=int)  # Batch size for both actor and critic
     parser.add_argument("--discount", default=0.99, type=float)  # Discount factor

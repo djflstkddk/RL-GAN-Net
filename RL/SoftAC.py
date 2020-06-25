@@ -55,9 +55,6 @@ class Actor(nn.Module):
         return pi_action, logp_pi
 
 
-
-
-
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic, self).__init__()
@@ -91,7 +88,7 @@ class SoftAC(object):
         actor_out = self.actor(state, deterministic=deterministic)
         return actor_out[0].cpu().data.numpy().flatten(), actor_out[1].cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, alpha = 0.1):
+    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, alpha = 0.2):
 
         for it in range(iterations):
 
