@@ -14,11 +14,6 @@ dataset_names = sorted(name for name in Datasets.__all__)
 model_names = sorted(name for name in models.__all__)
 
 
-
-
-
-
-
 def main(args,vis_Valid,vis_Valida):
     """ Transforms/ Data Augmentation Tec """
     co_transforms = pc_transforms.Compose([])
@@ -83,7 +78,6 @@ def main(args,vis_Valid,vis_Valida):
 
     model_actor = models.__dict__['actor_net'](args, data=network_data_Actor).cuda()
 
-
     model_critic = models.__dict__['critic_net'](args, data=network_data_Critic).cuda()
 
 
@@ -94,6 +88,11 @@ def main(args,vis_Valid,vis_Valida):
     params = get_n_params(model_decoder)
     print('| Number of Decoder parameters [' + str(params) + ']...')
 
+    params = get_n_params(model_actor)
+    print('| Number of Actor parameters [' + str(params) + ']...')
+
+    params = get_n_params(model_critic)
+    print('| Number of Critic parameters [' + str(params) + ']...')
 
 
     chamfer = ChamferLoss(args)
@@ -118,28 +117,51 @@ def testRL(test_loader,model_encoder,model_decoder, model_G,model_D,model_actor,
     model_actor.eval()
     model_critic.eval()
 
-    epoch_size = len(test_loader)
+    num_test_episodes = len(test_loader)
 
-
-    env = envs(args, model_G, model_D, model_encoder, model_decoder, epoch_size)
+    avg_reward = 0.
+    env = envs(args, model_G, model_D, model_encoder, model_decoder, num_test_episodes)
+    epi_timestep_list = []
 
     for i, (input,fname) in enumerate(test_loader):
 
         obs = env.agent_input(input)  # env(input, action_rand)
         done = False
+        step = 0
         while not done:
             # Action By Agent and collect reward
-            action = model_actor(np.array(obs))#policy.select_action(np.array(obs))
+            if args.policy_name=="DDPG":
+                action = model_actor(np.array(obs))
+            elif args.policy_name=="SoftAC":
+                action = model_actor(np.array(obs), deterministic=True)
+
             action = torch.tensor(action).cuda().unsqueeze(dim=0)
-            new_state, _, reward, done, _ = env(input, action, render=True, disp=True,fname=fname, filenum = str(i))
-            action
+            new_obs, new_pc, reward, done, _ = env(input,
+                                                     action,
+                                                     render=True,
+                                                     disp=True,
+                                                     is_first=True if step==0 else False,
+                                                     fname=fname,
+                                                     filenum = str(i),
+                                                     step=step)
 
+            avg_reward += reward
+            obs = new_obs
+            input = new_pc
 
+            done = True if done or step == args.max_episodes_steps + 1 else False
+            step += 1
 
+        epi_timestep_list.append(step)
 
-
-
-
+    avg_reward /= num_test_episodes
+    print("---------------------------------------")
+    print("Evaluation over %d episodes: %f" % (num_test_episodes, avg_reward))
+    print("Average episode_timestep: " + str(sum(epi_timestep_list) / len(epi_timestep_list)))
+    print("---------------------------------------")
+    with open(os.path.join('test', 'results'), 'w') as log:
+        log.write("Evaluation over %d episodes: %f \n" %(num_test_episodes, avg_reward))
+        log.write("Average episode_timestep: " + str(sum(epi_timestep_list) / len(epi_timestep_list)) + '\n')
 
 
 class envs(nn.Module):
@@ -158,8 +180,7 @@ class envs(nn.Module):
         self.model_encoder = model_encoder
         self.model_decoder = model_decoder
         self.j = 1
-        self.i = 0;
-        self.figures = 25
+        self.figures = 3
         self.attempts = args.attempts
         self.end = time.time()
         self.batch_time = AverageMeter()
@@ -167,19 +188,21 @@ class envs(nn.Module):
         self.attempt_id =0
         self.state_prev = np.zeros([4,])
         self.iter = 0
-    def reset(self,epoch_size,figures =3):
+        self.i = 0
+        self.prev_reward_D = -1000000
+    def reset(self, epoch_size, is_training, figures =3):
+        self.is_training = is_training
         self.j = 1;
-        self.i = 0;
         self.figures = figures;
         self.epoch_size= epoch_size
-    def agent_input(self,input):
+    def agent_input(self,input): # input: incomplete point cloud
         with torch.no_grad():
             input = input.cuda(async=True)
             input_var = Variable(input, requires_grad=True)
             encoder_out = self.model_encoder(input_var, )
             out = encoder_out.detach().cpu().numpy().squeeze()
         return out
-    def forward(self,input,action,render=False, disp=False,fname=None,filenum = None):
+    def forward(self,input,action,render=False, disp=False, is_first=False, fname=None, filenum=None, step=0):
         with torch.no_grad():
             # Encoder Input
             input = input.cuda(async=True)
@@ -202,7 +225,7 @@ class envs(nn.Module):
             # Discriminator Output
             #out_D, _ = self.model_D(encoder_out.view(-1,1,32,32))
         #    out_D, _ = self.model_D(encoder_out.view(-1, 1, 1,args.state_dim)) # TODO Alert major mistake
-            out_D, _ = self.model_D(out_GD) # TODO correct
+            out_D, _ = self.model_D(out_GD) # TODO Alert major mistake
 
             # H Decoder Output
 #            pc_1_G, pc_2_G, pc_3_G = self.model_decoder(out_G)
@@ -212,37 +235,36 @@ class envs(nn.Module):
             # Preprocesing of Input PC and Predicted PC for Visdom
             trans_input = torch.squeeze(input_var, dim=1)
             trans_input = torch.transpose(trans_input, 1, 2)
+
             trans_input_temp = trans_input[0, :, :]
             pc_1_temp = pc_1[0, :, :] # D Decoder PC
             pc_1_G_temp = pc_1_G[0, :, :] # H Decoder PC
 
 
         # Discriminator Loss
-        loss_D = 0.01*self.nll(out_D)
+        loss_D = self.nll(out_D)
 
         # Loss Between Noisy GFV and Clean GFV
-        loss_GFV = 10*self.mse(out_G, encoder_out)
+        loss_GFV = self.mse(encoder_out, out_G)
 
         # Norm Loss
-        loss_norm = 0.1*self.norm(z)
+        #loss_norm = self.norm(z)
 
         # Chamfer loss
-        loss_chamfer = 100*self.chamfer(pc_1_G, trans_input) #self.chamfer(pc_1_G, pc_1)  # instantaneous loss of batch items
+        #loss_chamfer = self.chamfer(pc_1_G, pc_1)  # #self.chamfer(pc_1_G, trans_input) instantaneous loss of batch items
+        loss_chamfer = self.chamfer(pc_1_G, trans_input)
 
         # States Formulation
         state_curr = np.array([loss_D.cpu().data.numpy(), loss_GFV.cpu().data.numpy()
-                                  , loss_chamfer.cpu().data.numpy(), loss_norm.cpu().data.numpy()])
+                                  , loss_chamfer.cpu().data.numpy()])
       #  state_prev = self.state_prev
 
         reward_D = state_curr[0]#state_curr[0] - self.state_prev[0]
-        reward_GFV =-state_curr[1]# -state_curr[1] + self.state_prev[1]
+        reward_GFV = -state_curr[1]# -state_curr[1] + self.state_prev[1]
         reward_chamfer = -state_curr[2]#-state_curr[2] + self.state_prev[2]
-        reward_norm =-state_curr[3] # - state_curr[3] + self.state_prev[3]
+        #reward_norm =-state_curr[3] # - state_curr[3] + self.state_prev[3]
         # Reward Formulation
-        reward = reward_D + reward_GFV + reward_chamfer  # 0.01*reward_D + 10.0*reward_GFV + 100.0*reward_chamfer + 0.1*reward_norm
-        #( reward_D + reward_GFV * 10.0 + reward_chamfer *100 + reward_norm*0.002) #reward_GFV + reward_chamfer + reward_D * (1/30)  TODO reward_D *0.002 + reward_GFV * 10.0 + reward_chamfer *100 + reward_norm  ( reward_D *0.2 + reward_GFV * 100.0 + reward_chamfer *100 + reward_norm)
-      #  reward = reward * 100
-     #   self.state_prev = state_curr
+        reward = reward_D * 0.01 + reward_GFV * 10.0 + reward_chamfer * 100.0 #+ reward_norm * 1/10
 
         #self.lossess.update(loss_chamfer.item(), input.size(0))  # loss and batch size as input
 
@@ -250,23 +272,7 @@ class envs(nn.Module):
         self.batch_time.update(time.time() - self.end)
         self.end = time.time()
 
-       # if i % args.print_freq == 0 :
-
       #  if self.j <= 5:
-        test1 = trans_input_temp.detach().cpu().numpy()
-        test2 = pc_1_temp.detach().cpu().numpy()
-        test3 = pc_1_G_temp.detach().cpu().numpy()
-        fname = fname[0]
-        if  not os.path.exists('test/'+fname[:8]):
-            os.makedirs('test/'+fname[:8])
-
-
-        np.savetxt('test/'+fname[:9]+filenum+'_input.xyz', np.c_[test1[0,:],test1[1,:],test1[2,:]],  header='x y z', fmt='%1.6f',
-               delimiter=' ')
-        np.savetxt('test/' +fname[:9]+ filenum + '_AE.xyz', np.c_[test2[0, :], test2[1, :], test2[2, :]], header='x y z', fmt='%1.6f',
-                   delimiter=' ')
-        np.savetxt('test/' +fname[:9]+ filenum + '_agent.xyz', np.c_[test3[0, :], test3[1, :], test3[2, :]], header='x y z', fmt='%1.6f',
-                   delimiter=' ')
         visuals = OrderedDict(
             [('Input_pc', trans_input_temp.detach().cpu().numpy()),
              ('AE Predicted_pc', pc_1_temp.detach().cpu().numpy()),
@@ -276,17 +282,46 @@ class envs(nn.Module):
          self.j += 1
 
         if disp:
-            print('[{4}][{0}/{1}]\t Reward: {2}\t States: {3}'.format(self.i, self.epoch_size,reward,state_curr,self.iter))
+            #print('[{4}][{0}/{1}]\t Reward: {2}\t States: {3}'.format(self.i, self.epoch_size,reward,state_curr,self.iter))
             self.i += 1
             if(self.i>=self.epoch_size):
                 self.i=0
                 self.iter +=1
 
+        test1 = trans_input_temp.detach().cpu().numpy()
+        test2 = pc_1_temp.detach().cpu().numpy()
+        test3 = pc_1_G_temp.detach().cpu().numpy()
+
+        fname = fname[0]
+        if not os.path.exists('test/' + fname[:8]):
+            os.makedirs('test/' + fname[:8])
+
+        if not os.path.exists('test/' + fname[:9] + filenum):
+            os.makedirs('test/' + fname[:9] + filenum)
+
+        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_input.xyz', np.c_[test1[0, :], test1[1, :], test1[2, :]],
+                   header='x y z', fmt='%1.6f',
+                   delimiter=' ')
+        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_AE.xyz', np.c_[test2[0, :], test2[1, :], test2[2, :]],
+                   header='x y z', fmt='%1.6f',
+                   delimiter=' ')
+        np.savetxt('test/' + fname[:9] + filenum + '/' + str(step) + '_agent.xyz', np.c_[test3[0, :], test3[1, :], test3[2, :]],
+                   header='x y z', fmt='%1.6f',
+                   delimiter=' ')
 
 
-        done = True
-        state = out_G.detach().cpu().data.numpy().squeeze()
-        return state, _, reward, done, self.lossess.avg
+        if is_first:
+            done = False
+        elif reward_D < self.prev_reward_D:
+            done = True
+        else:
+            done = False
+
+        self.prev_reward_D = reward_D
+
+        new_state = out_G.detach().cpu().data.numpy().squeeze()
+        new_state_pc = torch.transpose(pc_1_G, 1, 2).unsqueeze(1)
+        return new_state, new_state_pc, reward, done, self.lossess.avg
 
 
 
