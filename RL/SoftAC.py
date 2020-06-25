@@ -27,7 +27,7 @@ class Actor(nn.Module):
 
         self.max_action = max_action
 
-    def forward(self, x, deterministic = False, repara_trick = True, with_logprob = True):
+    def forward(self, x, deterministic=False, repara_trick=False, with_logprob=True):
         x = F.relu(self.l1(x))
         log_std = self.log_std_layer(x)
         std = torch.exp(log_std)
@@ -86,9 +86,9 @@ class SoftAC(object):
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), weight_decay=1e-2)
 
-    def select_action(self, state):
+    def select_action(self, state, deterministic=False):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        actor_out = self.actor(state)
+        actor_out = self.actor(state, deterministic=deterministic)
         return actor_out[0].cpu().data.numpy().flatten(), actor_out[1].cpu().data.numpy().flatten()
 
     def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, alpha = 0.1):

@@ -35,7 +35,7 @@ def evaluate_policy(policy, valid_loader, env, args, render = False):
         is_first = True
         while not done:
             if args.policy_name == "SoftAC":
-                action, _ = policy.select_action(np.array(curr_state))
+                action, _ = policy.select_action(np.array(curr_state), deterministic=True)
             elif args.policy_name == "DDPG":
                 action = policy.select_action(np.array(curr_state))
             action = torch.tensor(action).cuda().unsqueeze(dim=0)
