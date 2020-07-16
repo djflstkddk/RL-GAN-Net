@@ -10,7 +10,8 @@ month = {June},
 year = {2019}
 }
 ```
-Link for the original paper: https://arxiv.org/abs/1904.12304
+Link for the original paper: https://arxiv.org/abs/1904.12304<br>
+Refer to the report "Reinforcement_learning_for_point_cloud_completion.pdf" in this repo for detailed explanation.
 
 Requirements:
 
